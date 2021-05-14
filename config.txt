@@ -1,0 +1,182 @@
+Web Server
+
+yum install httpd –y 
+firewall-cmd --permanent --add-service=http
+firewall-cmd --permanent --add-service=https 
+firewall-cmd --reload
+systemctl enable httpd
+systemctl start httpd 
+systemctl status httpd 
+cd /var/www/html/index.html
+http://localhost
+vim /etc/hosts
+XX.XX.XX.XX www.example.com
+write domain name in browser
+
+
+
+
+
+
+
+
+Squid Server
+
+yum install squid *
+systemctl enable squid 
+systemctl start squid 
+systemctl status squid
+systemctl start firewalld 
+systemctl enable firewalld 
+firewall-cmd --permanent —add-port=3128/tcp 
+vim /etc/squid/squid.conf 
+#badsite block (add this line after first line in file) 
+acl badsites url_regex “/etc/squid/badsites” 
+http_access deny badsites 
+Put “#” in all localnet lines. 
+
+And add these line 
+ acl localnet src XX.XX.XX.0/24 (#allow local network 192.168.59.0/24) 
+ http_access allow localnet 
+vim /etc/squid/badsites
+
+dd url here which one we won’t to block:- 
+ .facebook.com 
+ .instagram.com
+
+#systemctl restart squid 
+ #systemctl status squid 
+
+vim /etc/sysconfig/network-scripts/ifcfg-ens33
+then add
+DNS=8.8.8.8
+systemctl restart network
+
+check client (Windows 7) pc ip 
+Change in internet explorer ip setting 
+ Go to tools, Internet option, Connections 
+ Go to Lan settings 
+ Select Use proxy server for your lan 
+ Add server’s ip address and port=3128 
+ Select “click proxy server.....” OK. 
+
+go to Preference -> General -> Setting (at last) 
+ Tick on Manual Proxy :- set server ip and port = 3128. 
+
+tail –f /var/log/squid/access.log
+
+
+
+
+DHCP
+
+yum install dhcp –y
+vim /etc/dhcp/dhcpd.conf
+
+authoritative;
+default-lease-time 600;
+max-lease-time 7200;
+
+subnet 192.168.57.0 netmask 255.255.255.0
+{
+range 192.168.57.10 192.168.57.50;
+option routers             192.168.57.20;
+option broadcast-address 192.168.57.255;
+option domain-name-servers 8.8.8.8, 8.8.4.4;
+}
+
+systemctl start dhcpd.service 
+
+systemctl status dhcpd.service 
+
+#ifconfig virbr0 down 
+ #ifconfig ens33 up 
+ #systemctl restart dhcpd.service 
+ #systemctl status dhcpd.service
+
+
+
+
+
+NFS
+
+yum install nfs-utils
+cd /mnt 
+mkdir nfsshare
+chmod 777 nfsshare
+vim /etc/exports
+
+/mnt/nfsshare XX.XX.XX.X/XX(rw,sync) (Write IP 192.168.1.0/24) 
+ #exportfs (Export File) 
+ #exportfs –r (Refresh) 
+ #exportfs
+
+ #firewall-cmd --permanent --add-service=nfs 
+ #firewall-cmd --reload 
+
+#systemctl enable nfs 
+ #systemctl start nfs
+
+
+CLient Side
+cd /mnt 
+ #mkdir nfsmount 
+ #chmod 777 nfsshare 
+ #vim /etc/fstab
+
+XX.XX.XX.XX(server ip):/mnt/nfsshare /mnt/nfsmount nfs defaults 0 0
+
+
+#mount –a (Mount directory as name in fstab file) 
+ #df –h 
+
+Then Test
+
+
+
+
+DNS
+
+
+
+yum install bind bind-utils -y 
+vim /etc/named.conf
+
+ Options { 
+ Listen-on port 53 { 127.0.0.1; any ; }; (All cache data will allow on 
+port No 53 for DNS) 
+ allow-query { localhost; any ;}; (allow all query) 
+ allow-query-cache { localhost; any ; }; 
+ 
+
+ semanage fcontext -a -t named_conf_t /etc/named.conf
+
+named-checkconf /etc/named.conf
+
+ #systemctl enable named 
+ #systemctl start named 
+ #systemctl status named
+
+
+#firewall-cmd --add-port=53/udp 
+ #firewall-cmd --add-port=53/udp --permanent
+
+
+yum install bind-chroot -y 
+ # systemctl restart named 
+
+# ln -s /etc/named.conf /var/named/chroot/etc/named.conf 
+
+
+vim /etc/sysconfig/network-scripts/ifcfg-ens33 
+ DNS=XX.XX.XX.XX 
+ #systemctl restart network
+
+
+vim /etc/resolv.conf 
+ nameserver XX.XX.XX.XX (In our case 172.16.217.153) 
+ # dig facebook.com (Getting IP of Facebook from root or free DNS server) 
+ # dig facebook.com (Refresh the entry) 
+ # nslookup facebook.com (Check the entry) 
+
+
